@@ -1,0 +1,14 @@
+{
+  "accounts": [
+    {
+      "name": "main",
+      "session": ".linego/session.json",
+      "workers": 4
+    },
+    {
+      "name": "second",
+      "session": ".linego/second.json",
+      "workers": 4
+    }
+  ]
+}

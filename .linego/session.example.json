@@ -1,0 +1,16 @@
+{
+  "access_token": "YOUR_ACCESS_TOKEN",
+  "refresh_token": "YOUR_REFRESH_TOKEN",
+  "application": "ANDROID\t26.11.0\tAndroid OS\t14",
+  "user_agent": "Line/26.11.0",
+  "token_refresh_at": 0,
+  "certificate": "",
+  "mid": "uYOUR_ACCOUNT_MID",
+  "qr_private_key": "",
+  "device_keys": [],
+  "sync_state": {
+    "revision": 0,
+    "global_revision": 0,
+    "individual_revision": 0
+  }
+}

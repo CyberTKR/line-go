@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "creator": [],
+  "owners": [],
+  "admins": [],
+  "blacklist": [],
+  "bots": [],
+  "commands": {
+    "kick": "kick",
+    "kickall": "kickall"
+  },
+  "groups": {}
+}
