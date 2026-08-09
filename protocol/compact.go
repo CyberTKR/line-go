@@ -90,7 +90,7 @@ func DecodeMessage(data []byte) (Message, error) {
 		return Message{}, err
 	}
 	if protocolID != 0x82 {
-		return Message{}, fmt.Errorf("compact thrift: protocol ID 0x82 bekleniyordu")
+		return Message{}, fmt.Errorf("compact thrift: expected protocol ID 0x82")
 	}
 	versionType, err := r.byte()
 	if err != nil {
