@@ -151,18 +151,26 @@ func (c *Client) RegisterPhone(ctx context.Context, phone, region string, provid
 	}
 
 	notify(2, "progress", "Retrieving country information")
-	simCard := []protocol.Field{protocol.F(1, protocol.String, region)}
+	countryInfoFields := buildCountryInfoFields(
+		authSessionID, region, c.config.SIMHNI, c.config.SIMCarrier,
+	)
 	if c.config.SIMHNI != "" {
-		simCard = append(simCard,
-			protocol.F(2, protocol.String, c.config.SIMHNI),
-			protocol.F(3, protocol.String, c.config.SIMCarrier),
-		)
 		notify(2, "sim_profile", fmt.Sprintf("Using SIM profile country=%s HNI=%s carrier=%s", region, c.config.SIMHNI, c.config.SIMCarrier))
 	}
-	if _, err := c.call(ctx, "getCountryInfo", []protocol.Field{
-		protocol.F(1, protocol.String, authSessionID),
-		protocol.F(11, protocol.Struct, simCard),
-	}); err != nil {
+	countryInfo := func() (any, error) {
+		return c.call(ctx, "getCountryInfo", countryInfoFields)
+	}
+	if _, err := callWithTransientRetry(
+		ctx,
+		countryInfo,
+		[]time.Duration{500 * time.Millisecond, time.Second},
+		func(attempt, total int, delay time.Duration) {
+			notify(2, "temporary_retry", fmt.Sprintf(
+				"LINE reported a temporary server error; retrying getCountryInfo in %s (%d/%d)",
+				delay, attempt, total,
+			))
+		},
+	); err != nil {
 		return Result{}, err
 	}
 
@@ -420,6 +428,56 @@ func validatePhoneForRegion(phone, region string) (string, error) {
 
 func (c *Client) call(ctx context.Context, method string, fields []protocol.Field) (any, error) {
 	return c.legy.call(ctx, method, api.RegistrationPath, fields)
+}
+
+func buildCountryInfoFields(authSessionID, region, hni, carrier string) []protocol.Field {
+	fields := []protocol.Field{
+		protocol.F(1, protocol.String, authSessionID),
+	}
+	if hni == "" || carrier == "" {
+		return fields
+	}
+	simCard := []protocol.Field{
+		protocol.F(1, protocol.String, region),
+		protocol.F(2, protocol.String, hni),
+		protocol.F(3, protocol.String, carrier),
+	}
+	return append(fields, protocol.F(11, protocol.Struct, simCard))
+}
+
+func callWithTransientRetry(
+	ctx context.Context,
+	call func() (any, error),
+	delays []time.Duration,
+	notify func(attempt, total int, delay time.Duration),
+) (any, error) {
+	total := len(delays) + 1
+	for attempt := 1; ; attempt++ {
+		result, err := call()
+		if err == nil {
+			return result, nil
+		}
+		serviceError, temporary := err.(*ServiceError)
+		if !temporary || !serviceError.Temporary() || attempt >= total {
+			if temporary && serviceError.Temporary() && attempt >= total {
+				return nil, fmt.Errorf("%s failed after %d attempts: %w", serviceError.Method, attempt, err)
+			}
+			return nil, err
+		}
+		delay := delays[attempt-1]
+		if notify != nil {
+			notify(attempt+1, total, delay)
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 func (c *Client) callWithHumanVerification(ctx context.Context, call func() (any, error), notify func(int, string, string)) (any, error) {

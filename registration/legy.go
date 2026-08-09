@@ -46,11 +46,16 @@ func (e *ServiceError) Error() string {
 	code, _ := integerField(e.Details, 1)
 	message, _ := e.Details[2].(string)
 	message = strings.TrimSpace(message)
+	if code == 0 && isTemporaryServerMessage(message) {
+		return fmt.Sprintf("%s: LINE reported a temporary server error (code=0); retry the same registration session shortly", e.Method)
+	}
 	if message != "" {
 		return fmt.Sprintf("%s: LINE rejected the request (code=%d): %s", e.Method, code, message)
 	}
 	var explanation string
 	switch code {
+	case 0:
+		explanation = "LINE returned an unspecified server error; retry later"
 	case 1:
 		explanation = "invalid request; check that the mobile number format matches the selected region"
 	case 5:
@@ -63,6 +68,19 @@ func (e *ServiceError) Error() string {
 		explanation = "LINE did not provide an error description"
 	}
 	return fmt.Sprintf("%s: %s (code=%d)", e.Method, explanation, code)
+}
+
+func (e *ServiceError) Temporary() bool {
+	message, _ := e.Details[2].(string)
+	return e.Code() == 0 && isTemporaryServerMessage(message)
+}
+
+func isTemporaryServerMessage(message string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(message))
+	return normalized == "" ||
+		strings.Contains(normalized, "server error") ||
+		strings.Contains(normalized, "サーバーエラー") ||
+		strings.Contains(normalized, "서버 오류")
 }
 
 func (e *ServiceError) Code() int64 {
