@@ -152,7 +152,7 @@ func (c *Client) refreshAccessToken(ctx context.Context, failedToken string, for
 	saveErr := c.store.Save(c.Session)
 	c.sessionMu.Unlock()
 	if saveErr != nil {
-		return "", fmt.Errorf("yenilenen token session'a kaydedilemedi: %w", saveErr)
+		return "", fmt.Errorf("save refreshed token session: %w", saveErr)
 	}
 	c.debugf("token refresh completed endpoint=%s elapsed_ms=%.1f access_fp=%s refresh_rotated=%t refresh_at=%d", api.TokenRefreshPath, float64(time.Since(started).Microseconds())/1000, tokenFingerprint(response.AccessToken), response.RefreshToken != "" && response.RefreshToken != refreshToken, refreshAt)
 	return response.AccessToken, nil
@@ -275,7 +275,7 @@ func (c *Client) SyncOnce(ctx context.Context, count int32) ([]Operation, bool, 
 	defer c.sessionMu.Unlock()
 	c.Session.SyncState = state
 	if err := c.store.Save(c.Session); err != nil {
-		return nil, false, fmt.Errorf("sync revision kaydedilemedi: %w", err)
+		return nil, false, fmt.Errorf("save sync revision: %w", err)
 	}
 	return operations, hasMore, nil
 }

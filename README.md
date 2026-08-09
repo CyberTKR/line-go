@@ -141,6 +141,29 @@ session and requires a new login rather than a normal refresh.
 `send` automatically retries with E2EE v2 when the destination requires it or
 LINE returns service error `82`.
 
+## Extended Talk APIs
+
+The client includes typed wrappers for contacts, chat management, recent
+messages, announcements, followers, configuration, and E2EE key lookup:
+
+```go
+contacts, err := line.GetAllContactIDs(ctx)
+blocked, err := line.GetBlockedContactIDs(ctx)
+
+chat, err := line.CreateChat(ctx, "New group", []string{"USER_MID"}, 0, "")
+err = line.UpdateChatName(ctx, chat.MID, "Renamed group")
+err = line.UpdateChatTicket(ctx, chat.MID, false)
+
+messages, err := line.GetRecentMessages(ctx, chat.MID, 50)
+announcements, err := line.GetChatAnnouncements(ctx, chat.MID)
+_, err = line.CreateChatAnnouncement(
+	ctx, chat.MID, "Important notice", "https://example.com/notice",
+)
+```
+
+Low-level request and response values remain available through `line.Talk` for
+applications that need fields not represented by the convenience models.
+
 ## Bot examples
 
 ```bash
@@ -247,7 +270,7 @@ cmd/linego/    Command-line interface
 
 ## Security
 
-- Never commit `.linego/`, `accounts.json`, `test.json`, `.env`, credential
+- Never commit `.linego/`, `accounts.json`, `.env`, credential
   exports, private keys, or generated QR images.
 - Rotate any credential that has previously been pasted into a chat, log, issue,
   commit, or public repository.
